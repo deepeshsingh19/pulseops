@@ -1,0 +1,90 @@
+package com.pulseops.api.incident.service;
+
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.pulseops.api.incident.dto.CreateIncidentRequest;
+import com.pulseops.api.incident.dto.IncidentResponse;
+import com.pulseops.api.incident.entity.Incident;
+import com.pulseops.api.incident.entity.IncidentStatus;
+import com.pulseops.api.incident.repository.IncidentRepository;
+import com.pulseops.api.outbox.service.OutboxService;
+import com.pulseops.common.events.IncidentDetectedEvent;
+
+@Service
+public class IncidentService {
+
+    private final IncidentRepository incidentRepository;
+    private final OutboxService outboxService;
+
+    public IncidentService(
+            IncidentRepository incidentRepository,
+            OutboxService outboxService) {
+
+        this.incidentRepository = incidentRepository;
+        this.outboxService = outboxService;
+    }
+
+    @Transactional
+public void createIncidentFromDetection(
+        IncidentDetectedEvent event) {
+
+    /*
+     * This method is intentionally separate from the REST create flow.
+     * The incident originated from telemetry rather than a user request.
+     */
+
+    Incident incident = new Incident();
+
+    incident.setIncidentKey(event.incidentKey());
+    incident.setTitle(event.title());
+    incident.setDescription(event.description());
+    incident.setSeverity(
+            com.pulseops.api.incident.entity.IncidentSeverity
+                    .valueOf(event.severity())
+    );
+    incident.setStatus(IncidentStatus.OPEN);
+    incident.setServiceName(event.serviceName());
+    incident.setDetectedAt(event.detectedAt());
+
+    Incident savedIncident =
+            incidentRepository.save(incident);
+
+    outboxService.createIncidentCreatedEvent(savedIncident);
+}
+
+    @Transactional
+    public IncidentResponse createIncident(CreateIncidentRequest request) {
+
+        Incident incident = new Incident();
+
+        incident.setIncidentKey(generateIncidentKey());
+        incident.setTitle(request.title());
+        incident.setDescription(request.description());
+        incident.setSeverity(request.severity());
+        incident.setStatus(IncidentStatus.OPEN);
+        incident.setServiceName(request.serviceName());
+
+        /*
+         * Both the incident and its outbox event are persisted
+         * within the same database transaction.
+         *
+         * If either operation fails, the transaction rolls back,
+         * preventing an incident from existing without its event.
+         */
+        Incident savedIncident = incidentRepository.save(incident);
+
+        outboxService.createIncidentCreatedEvent(savedIncident);
+
+        return IncidentResponse.from(savedIncident);
+    }
+
+    private String generateIncidentKey() {
+        return "INC-" + UUID.randomUUID()
+                .toString()
+                .substring(0, 8)
+                .toUpperCase();
+    }
+}

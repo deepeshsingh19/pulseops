@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: event-processor
+
+  # This service is a background worker, not an HTTP server.
+  main:
+    web-application-type: none
+
+  kafka:
+    bootstrap-servers: localhost:9092
+
+    consumer:
+      group-id: pulseops-event-processor
+      auto-offset-reset: earliest
+
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+
+      acks: all
+
+      properties:
+        enable.idempotence: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+pulseops:
+  ai:
+    base-url: http://localhost:8000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

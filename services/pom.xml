@@ -11,7 +11,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.5</version>
+        <version>4.1.0</version>
         <relativePath/>
     </parent>
 
@@ -33,6 +33,8 @@
 
     <modules>
         <module>pulseops-common</module>
+        <module>pulseops-api</module>
+        <module>event-processor</module>
     </modules>
 
     <dependencyManagement>

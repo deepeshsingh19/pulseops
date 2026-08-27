@@ -1,0 +1,58 @@
+spring:
+  application:
+    name: pulseops-api
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/pulseops
+    username: pulseops
+    password: pulseops
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  kafka:
+
+    consumer:
+      group-id: pulseops-incident-creator
+
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+
+      properties:
+        spring.json.trusted.packages: com.pulseops.common.events
+
+        spring.json.value.default.type: com.pulseops.common.events.IncidentDetectedEvent
+        
+    bootstrap-servers: localhost:9092
+
+    producer:
+      acks: all
+
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+      # OutboxPublisher stores the event as JSON text already,
+      # so Kafka should send that text directly.
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+      properties:
+        enable.idempotence: true
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+  endpoint:
+    health:
+      show-details: when-authorized
