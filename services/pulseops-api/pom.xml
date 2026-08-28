@@ -57,32 +57,36 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
-        <!-- Health and metrics -->
+        <!-- Health checks and application metrics -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- Shared PulseOps contracts -->
+        <!-- Exposes Micrometer metrics in Prometheus format -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
+        <!-- Shared PulseOps event contracts -->
         <dependency>
             <groupId>com.pulseops</groupId>
             <artifactId>pulseops-common</artifactId>
             <version>${project.version}</version>
         </dependency>
 
-        
+        <!-- Kafka producer/consumer support -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-kafka</artifactId>
+        </dependency>
 
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
-        </dependency>
-
-        <!-- Spring Boot Kafka integration -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-kafka</artifactId>
         </dependency>
 
     </dependencies>

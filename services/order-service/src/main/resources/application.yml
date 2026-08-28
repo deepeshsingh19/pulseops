@@ -2,9 +2,6 @@ spring:
   application:
     name: order-service
 
-  main:
-    web-application-type: servlet
-
 server:
   port: 8081
 
@@ -16,4 +13,8 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
+
+  endpoint:
+    health:
+      show-details: always

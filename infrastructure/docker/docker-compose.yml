@@ -4,46 +4,91 @@ services:
     image: postgres:17
     container_name: pulseops-postgres
     restart: unless-stopped
+
     environment:
       POSTGRES_DB: pulseops
       POSTGRES_USER: pulseops
       POSTGRES_PASSWORD: pulseops
+
     ports:
       - "5432:5432"
+
     volumes:
       - pulseops-postgres-data:/var/lib/postgresql/data
+
 
   kafka:
     image: apache/kafka:4.0.0
     container_name: pulseops-kafka
     restart: unless-stopped
+
     ports:
       - "9092:9092"
+
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      # Kafka uses 9093 internally for its controller quorum.
+
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      # 9093 is used internally by Kafka's controller.
+
       KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
 
   redis:
     image: redis:8-alpine
     container_name: pulseops-redis
     restart: unless-stopped
+
     ports:
       - "6379:6379"
+
     volumes:
       - pulseops-redis-data:/data
+
     command: redis-server --appendonly yes
+
+
+  prometheus:
+    image: prom/prometheus
+    container_name: pulseops-prometheus
+    restart: unless-stopped
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - pulseops-prometheus-data:/prometheus
+
+
+  grafana:
+    image: grafana/grafana
+    container_name: pulseops-grafana
+    restart: unless-stopped
+
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - pulseops-grafana-data:/var/lib/grafana
+
 
 volumes:
   pulseops-postgres-data:
   pulseops-redis-data:
+  pulseops-prometheus-data:
+  pulseops-grafana-data:

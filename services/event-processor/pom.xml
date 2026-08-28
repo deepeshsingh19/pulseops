@@ -34,14 +34,14 @@
         </dependency>
 
         <!--
-            Blocking HTTP client support.
+            Jackson 3 support.
 
-            This provides RestClient, its Builder auto-configuration,
-            HTTP message converters, and the required client infrastructure.
+            Used by the Event Processor to serialize the request sent
+            to the Python ML service and deserialize its response.
         -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-restclient</artifactId>
+            <artifactId>spring-boot-starter-json</artifactId>
         </dependency>
 
         <!-- Redis for shared correlation state -->

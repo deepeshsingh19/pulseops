@@ -2,7 +2,7 @@ spring:
   application:
     name: event-processor
 
-  # This service is a background worker, not an HTTP server.
+  # Event Processor is a background worker, not an HTTP server.
   main:
     web-application-type: none
 
