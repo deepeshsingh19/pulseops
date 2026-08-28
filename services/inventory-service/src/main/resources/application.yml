@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: inventory-service
+
+server:
+  port: 8083
+
+pulseops:
+  api:
+    base-url: http://localhost:8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
