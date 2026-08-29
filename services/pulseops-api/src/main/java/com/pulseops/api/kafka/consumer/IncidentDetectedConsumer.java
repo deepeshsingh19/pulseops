@@ -1,10 +1,11 @@
 package com.pulseops.api.kafka.consumer;
 
-import com.pulseops.api.incident.service.IncidentService;
-import com.pulseops.common.events.IncidentDetectedEvent;
-import com.pulseops.api.kafka.config.KafkaTopics;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+
+import com.pulseops.api.incident.service.IncidentService;
+import com.pulseops.api.kafka.config.KafkaTopics;
+import com.pulseops.common.events.IncidentDetectedEvent;
 
 @Component
 public class IncidentDetectedConsumer {
@@ -19,7 +20,8 @@ public class IncidentDetectedConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.INCIDENTS_DETECTED,
-            groupId = "pulseops-incident-creator"
+            groupId = "pulseops-incident-creator",
+            containerFactory = "incidentDetectedKafkaListenerContainerFactory"
     )
     public void consume(IncidentDetectedEvent event) {
 

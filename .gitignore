@@ -31,3 +31,6 @@
 # Logs
 *.log
 logs/
+
+# OpenTelemetry Java agent
+infrastructure/observability/java-agent/opentelemetry-javaagent.jar

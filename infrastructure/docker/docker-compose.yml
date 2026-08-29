@@ -86,9 +86,47 @@ services:
     volumes:
       - pulseops-grafana-data:/var/lib/grafana
 
+  tempo:
+    image: grafana/tempo:3.0.0
+    container_name: pulseops-tempo
+    restart: unless-stopped
+
+    command:
+      - "-config.file=/etc/tempo/tempo.yml"
+
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+
+    volumes:
+      - ../observability/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - pulseops-tempo-data:/var/tempo
+
+
+
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    container_name: pulseops-otel-collector
+    restart: unless-stopped
+
+    command:
+      - "--config=/etc/otelcol/config.yml"
+
+    ports:
+      - "4319:4317"
+      - "4320:4318"
+
+    volumes:
+      - ../observability/otel-collector/config.yml:/etc/otelcol/config.yml:ro
+
+    depends_on:
+      - tempo
+
 
 volumes:
   pulseops-postgres-data:
   pulseops-redis-data:
   pulseops-prometheus-data:
   pulseops-grafana-data:
+  pulseops-tempo-data:
