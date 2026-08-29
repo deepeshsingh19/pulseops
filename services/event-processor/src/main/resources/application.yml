@@ -34,6 +34,12 @@ pulseops:
   ai:
     base-url: http://localhost:8000
 
+  prometheus:
+    base-url: http://localhost:9090
+
+  tempo:
+    base-url: http://localhost:3200
+
 management:
   endpoints:
     web:

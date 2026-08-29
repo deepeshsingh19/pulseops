@@ -25,6 +25,13 @@ public class IncidentDetectedConsumer {
     )
     public void consume(IncidentDetectedEvent event) {
 
+        /*
+         * The API owns the incident record.
+         *
+         * Evidence collection and RCA will happen after the incident
+         * has been persisted so every investigation has a stable
+         * incident identifier.
+         */
         incidentService.createIncidentFromDetection(event);
     }
 }

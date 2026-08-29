@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 
 from pulseops_ai.anomaly.detector import AnomalyDetector
 from pulseops_ai.anomaly.features import extract_features
@@ -21,12 +21,12 @@ def health() -> dict[str, str]:
 @app.post(
     "/api/v1/anomaly/score",
     response_model=AnomalyResponse,
+    response_model_by_alias=True,
 )
 async def score_anomaly(
     request: Request,
 ) -> AnomalyResponse:
 
-    
     raw_body = await request.body()
 
     print(
@@ -35,11 +35,7 @@ async def score_anomaly(
         f"content_type={request.headers.get('content-type')}"
     )
 
-    print(f"Raw body: {raw_body.decode('utf-8')}")
-
     if not raw_body:
-        from fastapi import HTTPException
-
         raise HTTPException(
             status_code=422,
             detail="Request body was empty",
@@ -50,8 +46,6 @@ async def score_anomaly(
             raw_body
         )
     except Exception as exception:
-        from fastapi import HTTPException
-
         raise HTTPException(
             status_code=422,
             detail=f"Invalid request body: {exception}",
@@ -62,10 +56,14 @@ async def score_anomaly(
         AnomalyDetector(),
     )
 
-    features = extract_features(payload.metadata)
+    features = extract_features(
+        payload.metadata
+    )
 
+    # Score against the existing baseline first.
     anomaly_score = detector.score(features)
 
+    # Then include the observation in the rolling baseline.
     detector.add_sample(features)
 
     return AnomalyResponse(

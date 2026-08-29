@@ -4,6 +4,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -43,51 +44,35 @@ public class AiServiceClient {
                     jsonMapper.writeValueAsString(request);
 
             /*
-             * Keep the request explicit:
-             * - HTTP/1.1
-             * - JSON content type
-             * - JSON body
-             *
-             * This avoids framework-specific message conversion.
+             * Java HttpClient manages Content-Length automatically.
+             * Only the application-level headers are set here.
              */
             HttpRequest httpRequest = HttpRequest.newBuilder()
                     .uri(URI.create(
                             baseUrl + "/api/v1/anomaly/score"
                     ))
                     .version(HttpClient.Version.HTTP_1_1)
-                    .header("Content-Type", "application/json")
-                    .header("Accept", "application/json")
                     .header(
-                            "Content-Length",
-                            String.valueOf(
-                                    jsonBody.getBytes(
-                                            java.nio.charset.StandardCharsets.UTF_8
-                                    ).length
-                            )
+                            "Content-Type",
+                            "application/json"
+                    )
+                    .header(
+                            "Accept",
+                            "application/json"
                     )
                     .POST(
                             HttpRequest.BodyPublishers.ofString(
-                                    jsonBody
+                                    jsonBody,
+                                    StandardCharsets.UTF_8
                             )
                     )
                     .build();
-
-            System.out.println(
-                    "Calling AI service with body: " + jsonBody
-            );
 
             HttpResponse<String> response =
                     httpClient.send(
                             httpRequest,
                             HttpResponse.BodyHandlers.ofString()
                     );
-
-            System.out.println(
-                    "AI service response: HTTP "
-                            + response.statusCode()
-                            + " "
-                            + response.body()
-            );
 
             if (response.statusCode() < 200
                     || response.statusCode() >= 300) {
