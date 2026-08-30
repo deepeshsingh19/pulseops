@@ -1,6 +1,6 @@
 [project]
 name = "pulseops-ai"
-version = "0.1.0"
+version = "0.2.0"
 description = "ML and AI services for PulseOps"
 requires-python = ">=3.12"
 dependencies = [
@@ -8,7 +8,8 @@ dependencies = [
     "uvicorn[standard]>=0.35.0",
     "scikit-learn>=1.7.0",
     "numpy>=2.3.0",
-    "pydantic>=2.11.0"
+    "pydantic>=2.11.0",
+    "google-genai>=1.0.0"
 ]
 
 [dependency-groups]

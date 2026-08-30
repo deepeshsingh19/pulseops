@@ -2,25 +2,66 @@ from __future__ import annotations
 
 from typing import Any
 
+from pulseops_ai.rca.llm import GeminiRCAClient
 from pulseops_ai.rca.models import RCARequest, RCAResponse
 
 
 class RCAEngine:
 
-    def analyze(self, request: RCARequest) -> RCAResponse:
+    def __init__(self) -> None:
+
+        self.llm_client = GeminiRCAClient()
+
+    def analyze(
+        self,
+        request: RCARequest,
+    ) -> RCAResponse:
+
+        deterministic_result = (
+            self._deterministic_analysis(request)
+        )
+
+        if self.llm_client.client is None:
+            return deterministic_result
+
+        try:
+
+            llm_result = self.llm_client.analyze(
+                request
+            )
+
+            if llm_result is None:
+                return deterministic_result
+
+            return self._merge_results(
+                deterministic_result,
+                llm_result,
+            )
+
+        except Exception as exception:
+
+            print(
+                "Gemini RCA unavailable; "
+                "using deterministic RCA: "
+                f"{exception}"
+            )
+
+            return deterministic_result
+
+    def _deterministic_analysis(
+        self,
+        request: RCARequest,
+    ) -> RCAResponse:
 
         evidence: list[str] = []
-        root_cause = "Insufficient evidence to determine root cause."
+        root_cause = (
+            "Insufficient evidence to determine root cause."
+        )
         impact = "Service degradation detected."
         recommended_actions: list[str] = []
         confidence = 0.40
 
         metrics = request.metrics
-
-        # 
-        # The metrics field may currently contain raw Prometheus data.
-        # We therefore inspect both structured values and known signals.
-        # 
 
         db_latency = self._numeric_value(
             metrics.get("db_latency_ms")
@@ -35,17 +76,21 @@ class RCAEngine:
         )
 
         if db_latency > 1000:
+
             evidence.append(
-                f"Database latency is elevated at {db_latency:.0f} ms."
+                f"Database latency is elevated at "
+                f"{db_latency:.0f} ms."
             )
 
         if db_pool_usage > 90:
+
             evidence.append(
                 f"Database connection pool usage is "
                 f"{db_pool_usage:.1f}%."
             )
 
         if error_rate > 5:
+
             evidence.append(
                 f"HTTP 5xx error rate is "
                 f"{error_rate:.1f}%."
@@ -56,10 +101,12 @@ class RCAEngine:
             and db_pool_usage > 90
             and error_rate > 5
         ):
+
             root_cause = (
                 "The payment service is likely experiencing "
-                "database connection saturation, causing elevated "
-                "database latency and downstream HTTP 5xx errors."
+                "database connection saturation, causing "
+                "elevated database latency and downstream "
+                "HTTP 5xx errors."
             )
 
             impact = (
@@ -77,6 +124,7 @@ class RCAEngine:
             confidence = 0.91
 
         elif db_latency > 1000:
+
             root_cause = (
                 "Elevated database latency is the strongest "
                 "available signal for the incident."
@@ -90,10 +138,11 @@ class RCAEngine:
             confidence = 0.72
 
         elif error_rate > 5:
+
             root_cause = (
-                "The service is experiencing an elevated HTTP "
-                "error rate, but the available evidence does not "
-                "identify the underlying dependency."
+                "The service is experiencing an elevated "
+                "HTTP error rate, but the available evidence "
+                "does not identify the underlying dependency."
             )
 
             recommended_actions = [
@@ -113,7 +162,39 @@ class RCAEngine:
         )
 
     @staticmethod
-    def _numeric_value(value: Any) -> float:
+    def _merge_results(
+        deterministic: RCAResponse,
+        llm: RCAResponse,
+    ) -> RCAResponse:
+
+        evidence = (
+            llm.evidence
+            if llm.evidence
+            else deterministic.evidence
+        )
+
+        actions = (
+            llm.recommended_actions
+            if llm.recommended_actions
+            else deterministic.recommended_actions
+        )
+
+        return RCAResponse(
+            incident_key=deterministic.incident_key,
+            root_cause=llm.root_cause,
+            confidence=min(
+                max(llm.confidence, 0.0),
+                0.99,
+            ),
+            impact=llm.impact,
+            evidence=evidence,
+            recommended_actions=actions,
+        )
+
+    @staticmethod
+    def _numeric_value(
+        value: Any,
+    ) -> float:
 
         if isinstance(value, bool):
             return 0.0
@@ -123,5 +204,6 @@ class RCAEngine:
 
         try:
             return float(value)
+
         except (TypeError, ValueError):
             return 0.0
