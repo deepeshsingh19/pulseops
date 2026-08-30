@@ -4,13 +4,16 @@ from pulseops_ai.anomaly.detector import AnomalyDetector
 from pulseops_ai.anomaly.features import extract_features
 from pulseops_ai.models.requests import AnomalyRequest
 from pulseops_ai.models.responses import AnomalyResponse
+from pulseops_ai.rca.engine import RCAEngine
+from pulseops_ai.rca.models import RCARequest, RCAResponse
 
 app = FastAPI(
     title="PulseOps AI Service",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 detectors: dict[str, AnomalyDetector] = {}
+rca_engine = RCAEngine()
 
 
 @app.get("/health")
@@ -28,12 +31,6 @@ async def score_anomaly(
 ) -> AnomalyResponse:
 
     raw_body = await request.body()
-
-    print(
-        f"Received anomaly request: "
-        f"bytes={len(raw_body)}, "
-        f"content_type={request.headers.get('content-type')}"
-    )
 
     if not raw_body:
         raise HTTPException(
@@ -60,10 +57,8 @@ async def score_anomaly(
         payload.metadata
     )
 
-    # Score against the existing baseline first.
     anomaly_score = detector.score(features)
 
-    # Then include the observation in the rolling baseline.
     detector.add_sample(features)
 
     return AnomalyResponse(
@@ -72,3 +67,22 @@ async def score_anomaly(
         anomalous=anomaly_score >= 0.75,
         model_ready=detector.model_ready,
     )
+
+
+@app.post(
+    "/api/v1/rca/analyze",
+    response_model=RCAResponse,
+)
+def analyze_root_cause(
+    request: RCARequest,
+) -> RCAResponse:
+
+    try:
+        return rca_engine.analyze(request)
+
+    except Exception as exception:
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"RCA analysis failed: {exception}",
+        )

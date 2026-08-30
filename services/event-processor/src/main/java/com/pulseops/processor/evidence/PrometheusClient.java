@@ -1,18 +1,20 @@
 package com.pulseops.processor.evidence;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 /**
  * Small client for the Prometheus HTTP API.
  *
- * Keeping this as a separate component means the evidence collector
- * doesn't need to know how Prometheus queries are transported.
+ * The client only handles HTTP transport. PromQL interpretation stays
+ * inside the evidence collector.
  */
 @Component
 public class PrometheusClient {
@@ -23,7 +25,10 @@ public class PrometheusClient {
     public PrometheusClient(
             @Value("${pulseops.prometheus.base-url}") String baseUrl) {
 
-        this.httpClient = HttpClient.newHttpClient();
+        this.httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .build();
+
         this.baseUrl = baseUrl;
     }
 
@@ -31,9 +36,9 @@ public class PrometheusClient {
 
         try {
             String encodedQuery =
-                    java.net.URLEncoder.encode(
+                    URLEncoder.encode(
                             promql,
-                            java.nio.charset.StandardCharsets.UTF_8
+                            StandardCharsets.UTF_8
                     );
 
             HttpRequest request =
@@ -45,8 +50,12 @@ public class PrometheusClient {
                                                     + encodedQuery
                                     )
                             )
+                            .version(HttpClient.Version.HTTP_1_1)
+                            .header(
+                                    "Accept",
+                                    "application/json"
+                            )
                             .GET()
-                            .header("Accept", "application/json")
                             .build();
 
             HttpResponse<String> response =

@@ -2,7 +2,7 @@ spring:
   application:
     name: event-processor
 
-  # Event Processor is a background worker, not an HTTP server.
+  # Event Processor runs Kafka listeners and does not expose an API.
   main:
     web-application-type: none
 
@@ -12,9 +12,6 @@ spring:
     consumer:
       group-id: pulseops-event-processor
       auto-offset-reset: earliest
-
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
 
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer

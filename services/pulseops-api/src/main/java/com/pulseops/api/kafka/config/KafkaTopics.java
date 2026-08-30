@@ -5,9 +5,18 @@ public final class KafkaTopics {
     private KafkaTopics() {
     }
 
-    public static final String INCIDENTS_CREATED = "incidents.created";
+    public static final String INCIDENTS_CREATED =
+            "incidents.created";
 
-    public static final String TELEMETRY_EVENTS = "telemetry.events";
+    public static final String INCIDENTS_DETECTED =
+            "incidents.detected";
 
-    public static final String INCIDENTS_DETECTED = "incidents.detected";
+    public static final String TELEMETRY_EVENTS =
+            "telemetry.events";
+
+    public static final String RCA_REQUESTED =
+            "incidents.rca.requested";
+
+    public static final String RCA_COMPLETED =
+            "incidents.rca.completed";
 }
