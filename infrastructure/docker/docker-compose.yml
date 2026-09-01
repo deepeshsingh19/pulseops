@@ -16,7 +16,6 @@ services:
     volumes:
       - pulseops-postgres-data:/var/lib/postgresql/data
 
-
   kafka:
     image: apache/kafka:4.0.0
     container_name: pulseops-kafka
@@ -28,25 +27,17 @@ services:
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
 
       KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
 
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-
 
   redis:
     image: redis:8-alpine
@@ -61,7 +52,6 @@ services:
 
     command: redis-server --appendonly yes
 
-
   prometheus:
     image: prom/prometheus
     container_name: pulseops-prometheus
@@ -73,7 +63,6 @@ services:
     volumes:
       - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - pulseops-prometheus-data:/prometheus
-
 
   grafana:
     image: grafana/grafana
@@ -103,8 +92,6 @@ services:
       - ../observability/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
       - pulseops-tempo-data:/var/tempo
 
-
-
   otel-collector:
     image: otel/opentelemetry-collector:latest
     container_name: pulseops-otel-collector
@@ -123,6 +110,111 @@ services:
     depends_on:
       - tempo
 
+  ai-service:
+    build:
+      context: ../../services/ai-service
+
+    container_name: pulseops-ai-service
+    restart: unless-stopped
+
+    environment:
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.7-flash}
+
+    ports:
+      - "8000:8000"
+
+  pulseops-api:
+    build:
+      context: ../../services/pulseops-api
+
+    container_name: pulseops-api
+    restart: unless-stopped
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pulseops
+      SPRING_DATASOURCE_USERNAME: pulseops
+      SPRING_DATASOURCE_PASSWORD: pulseops
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+    ports:
+      - "8080:8080"
+
+    depends_on:
+      - postgres
+      - kafka
+
+  event-processor:
+    build:
+      context: ../../services/event-processor
+
+    container_name: pulseops-event-processor
+    restart: unless-stopped
+
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      PULSEOPS_AI_BASE_URL: http://ai-service:8000
+      PULSEOPS_PROMETHEUS_BASE_URL: http://prometheus:9090
+      PULSEOPS_TEMPO_BASE_URL: http://tempo:3200
+
+    depends_on:
+      - kafka
+      - redis
+      - ai-service
+      - prometheus
+      - tempo
+
+  order-service:
+    build:
+      context: ../../services/order-service
+
+    container_name: pulseops-order-service
+    restart: unless-stopped
+
+    environment:
+      SERVER_PORT: 8081
+      PULSEOPS_API_BASE_URL: http://pulseops-api:8080
+
+    ports:
+      - "8081:8081"
+
+    depends_on:
+      - pulseops-api
+
+  payment-service:
+    build:
+      context: ../../services/payment-service
+
+    container_name: pulseops-payment-service
+    restart: unless-stopped
+
+    environment:
+      SERVER_PORT: 8082
+      PULSEOPS_API_BASE_URL: http://pulseops-api:8080
+
+    ports:
+      - "8082:8082"
+
+    depends_on:
+      - pulseops-api
+
+  inventory-service:
+    build:
+      context: ../../services/inventory-service
+
+    container_name: pulseops-inventory-service
+    restart: unless-stopped
+
+    environment:
+      SERVER_PORT: 8083
+      PULSEOPS_API_BASE_URL: http://pulseops-api:8080
+
+    ports:
+      - "8083:8083"
+
+    depends_on:
+      - pulseops-api
 
 volumes:
   pulseops-postgres-data:

@@ -2,12 +2,11 @@ spring:
   application:
     name: event-processor
 
-  # Event Processor runs Kafka listeners and does not expose an API.
   main:
     web-application-type: none
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
     consumer:
       group-id: pulseops-event-processor
@@ -24,18 +23,18 @@ spring:
 
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
 
 pulseops:
   ai:
-    base-url: http://localhost:8000
+    base-url: ${PULSEOPS_AI_BASE_URL:http://localhost:8000}
 
   prometheus:
-    base-url: http://localhost:9090
+    base-url: ${PULSEOPS_PROMETHEUS_BASE_URL:http://localhost:9090}
 
   tempo:
-    base-url: http://localhost:3200
+    base-url: ${PULSEOPS_TEMPO_BASE_URL:http://localhost:3200}
 
 management:
   endpoints:

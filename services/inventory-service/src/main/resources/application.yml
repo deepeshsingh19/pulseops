@@ -3,11 +3,11 @@ spring:
     name: inventory-service
 
 server:
-  port: 8083
+  port: ${SERVER_PORT:8083}
 
 pulseops:
   api:
-    base-url: http://localhost:8080
+    base-url: ${PULSEOPS_API_BASE_URL:http://localhost:8080}
 
 management:
   endpoints:
