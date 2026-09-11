@@ -640,4 +640,4 @@ These are intentionally outside the current local Docker-based implementation.
 
 ## License
 
-This project is licensed under the terms of the repository's `LICENSE` file.
+This project is for portfolio and educational purposes.
