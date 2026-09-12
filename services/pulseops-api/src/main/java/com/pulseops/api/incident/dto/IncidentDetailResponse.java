@@ -1,11 +1,11 @@
 package com.pulseops.api.incident.dto;
 
-import com.pulseops.api.incident.entity.Incident;
-import com.pulseops.api.incident.entity.IncidentRca;
-
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+
+import com.pulseops.api.incident.entity.Incident;
+import com.pulseops.api.incident.entity.IncidentRca;
 
 public record IncidentDetailResponse(
         Long id,
@@ -18,12 +18,14 @@ public record IncidentDetailResponse(
         Instant detectedAt,
         Instant createdAt,
         Instant updatedAt,
-        RcaResponse rca
+        RcaResponse rca,
+        List<TelemetryResponse> telemetry
 ) {
 
     public static IncidentDetailResponse from(
             Incident incident,
-            IncidentRca rca) {
+            IncidentRca rca,
+            List<TelemetryResponse> telemetry) {
 
         return new IncidentDetailResponse(
                 incident.getId(),
@@ -36,7 +38,8 @@ public record IncidentDetailResponse(
                 incident.getDetectedAt(),
                 incident.getCreatedAt(),
                 incident.getUpdatedAt(),
-                RcaResponse.from(rca)
+                RcaResponse.from(rca),
+                telemetry
         );
     }
 
@@ -50,6 +53,10 @@ public record IncidentDetailResponse(
 
         private static RcaResponse from(
                 IncidentRca rca) {
+
+            if (rca == null) {
+                return null;
+            }
 
             return new RcaResponse(
                     rca.getRootCause(),
@@ -74,5 +81,14 @@ public record IncidentDetailResponse(
                     .filter(line -> !line.isEmpty())
                     .toList();
         }
+    }
+
+    public record TelemetryResponse(
+            String metric,
+            double value,
+            Instant timestamp,
+            String traceId,
+            String spanId
+    ) {
     }
 }

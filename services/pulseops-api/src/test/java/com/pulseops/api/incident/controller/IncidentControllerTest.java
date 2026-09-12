@@ -111,6 +111,75 @@ class IncidentControllerTest {
     }
 
     @Test
+    void shouldReturnIncidents() {
+
+        Instant now = Instant.now();
+
+        List<IncidentResponse> serviceResponse =
+                List.of(
+                        new IncidentResponse(
+                                291L,
+                                "AUTO-PAYMENT-SERVICE-392B9651",
+                                "Payment service degradation detected",
+                                "Telemetry correlation detected abnormal payment-service behavior.",
+                                IncidentSeverity.CRITICAL,
+                                IncidentStatus.OPEN,
+                                "payment-service",
+                                now,
+                                now,
+                                now
+                        ),
+                        new IncidentResponse(
+                                290L,
+                                "AUTO-PAYMENT-SERVICE-A4EE293A",
+                                "Payment service degradation detected",
+                                "Telemetry correlation detected abnormal payment-service behavior.",
+                                IncidentSeverity.CRITICAL,
+                                IncidentStatus.OPEN,
+                                "payment-service",
+                                now,
+                                now,
+                                now
+                        )
+                );
+
+        when(
+                incidentService.getIncidents()
+        ).thenReturn(serviceResponse);
+
+        ResponseEntity<List<IncidentResponse>> response =
+                incidentController.getIncidents();
+
+        assertEquals(
+                200,
+                response.getStatusCode().value()
+        );
+
+        assertNotNull(
+                response.getBody()
+        );
+
+        assertEquals(
+                2,
+                response.getBody().size()
+        );
+
+        assertEquals(
+                291L,
+                response.getBody().get(0).id()
+        );
+
+        assertEquals(
+                "AUTO-PAYMENT-SERVICE-392B9651",
+                response.getBody().get(0).incidentKey()
+        );
+
+        verify(
+                incidentService
+        ).getIncidents();
+    }
+
+    @Test
     void shouldReturnIncidentWithRca() {
 
         IncidentDetailResponse.RcaResponse rca =
@@ -143,7 +212,8 @@ class IncidentControllerTest {
                         now,
                         now,
                         now,
-                        rca
+                        rca,
+                        List.of()
                 );
 
         when(
@@ -194,6 +264,15 @@ class IncidentControllerTest {
         assertEquals(
                 2,
                 response.getBody().rca().recommendedActions().size()
+        );
+
+        assertNotNull(
+                response.getBody().telemetry()
+        );
+
+        assertEquals(
+                0,
+                response.getBody().telemetry().size()
         );
 
         verify(

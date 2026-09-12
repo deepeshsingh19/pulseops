@@ -1,6 +1,7 @@
 package com.pulseops.api.incident.service;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -16,27 +17,40 @@ import com.pulseops.api.incident.repository.IncidentRcaRepository;
 import com.pulseops.api.incident.repository.IncidentRepository;
 import com.pulseops.api.kafka.producer.RcaRequestedProducer;
 import com.pulseops.api.outbox.service.OutboxService;
+import com.pulseops.api.telemetry.entity.TelemetryEventEntity;
+import com.pulseops.api.telemetry.repository.TelemetryEventRepository;
 import com.pulseops.common.events.IncidentDetectedEvent;
 import com.pulseops.common.events.RcaRequestedEvent;
+
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class IncidentService {
 
+    private static final long TELEMETRY_WINDOW_SECONDS = 60;
+
     private final IncidentRepository incidentRepository;
     private final IncidentRcaRepository incidentRcaRepository;
+    private final TelemetryEventRepository telemetryEventRepository;
     private final OutboxService outboxService;
     private final RcaRequestedProducer rcaRequestedProducer;
+    private final ObjectMapper objectMapper;
 
     public IncidentService(
             IncidentRepository incidentRepository,
             IncidentRcaRepository incidentRcaRepository,
+            TelemetryEventRepository telemetryEventRepository,
             OutboxService outboxService,
-            RcaRequestedProducer rcaRequestedProducer) {
+            RcaRequestedProducer rcaRequestedProducer,
+            ObjectMapper objectMapper) {
 
         this.incidentRepository = incidentRepository;
         this.incidentRcaRepository = incidentRcaRepository;
+        this.telemetryEventRepository = telemetryEventRepository;
         this.outboxService = outboxService;
         this.rcaRequestedProducer = rcaRequestedProducer;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -110,10 +124,6 @@ public class IncidentService {
                 savedIncident
         );
 
-        /*
-         * The incident is persisted before requesting RCA so the
-         * investigation can reference the database identifier.
-         */
         rcaRequestedProducer.publish(
                 new RcaRequestedEvent(
                         savedIncident.getId(),
@@ -125,6 +135,16 @@ public class IncidentService {
                         Instant.now()
                 )
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<IncidentResponse> getIncidents() {
+
+        return incidentRepository
+                .findAllByOrderByCreatedAtDesc()
+                .stream()
+                .map(IncidentResponse::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -141,29 +161,108 @@ public class IncidentService {
                         )
                 );
 
+        List<IncidentDetailResponse.TelemetryResponse>
+                telemetry =
+                getTelemetry(
+                        incident
+                );
+
         return incidentRcaRepository
                 .findByIncidentId(incidentId)
                 .map(rca ->
                         IncidentDetailResponse.from(
                                 incident,
-                                rca
+                                rca,
+                                telemetry
                         )
                 )
                 .orElseGet(() ->
-                        new IncidentDetailResponse(
-                                incident.getId(),
-                                incident.getIncidentKey(),
-                                incident.getTitle(),
-                                incident.getDescription(),
-                                incident.getSeverity().name(),
-                                incident.getStatus().name(),
-                                incident.getServiceName(),
-                                incident.getDetectedAt(),
-                                incident.getCreatedAt(),
-                                incident.getUpdatedAt(),
-                                null
+                        IncidentDetailResponse.from(
+                                incident,
+                                null,
+                                telemetry
                         )
                 );
+    }
+
+    private List<IncidentDetailResponse.TelemetryResponse>
+    getTelemetry(Incident incident) {
+
+        Instant detectedAt = incident.getDetectedAt();
+
+        if (detectedAt == null) {
+            return List.of();
+        }
+
+        Instant start =
+                detectedAt.minusSeconds(
+                        TELEMETRY_WINDOW_SECONDS
+                );
+
+        Instant end = detectedAt;
+
+        return telemetryEventRepository
+                .findByServiceNameAndEventTimestampBetweenOrderByEventTimestampAsc(
+                        incident.getServiceName(),
+                        start,
+                        end
+                )
+                .stream()
+                .filter(event ->
+                        "METRIC".equalsIgnoreCase(
+                                event.getEventType()
+                        )
+                )
+                .map(this::toTelemetryResponse)
+                .flatMap(java.util.Optional::stream)
+                .toList();
+    }
+
+    private java.util.Optional<
+            IncidentDetailResponse.TelemetryResponse>
+    toTelemetryResponse(
+            TelemetryEventEntity event) {
+
+        if (event.getMetadata() == null
+                || event.getMetadata().isBlank()) {
+
+            return java.util.Optional.empty();
+        }
+
+        try {
+
+            JsonNode metadata =
+                    objectMapper.readTree(
+                            event.getMetadata()
+                    );
+
+            JsonNode metricNode =
+                    metadata.get("metric");
+
+            JsonNode valueNode =
+                    metadata.get("value");
+
+            if (metricNode == null
+                    || valueNode == null
+                    || !valueNode.isNumber()) {
+
+                return java.util.Optional.empty();
+            }
+
+            return java.util.Optional.of(
+                    new IncidentDetailResponse.TelemetryResponse(
+                            metricNode.asText(),
+                            valueNode.asDouble(),
+                            event.getEventTimestamp(),
+                            event.getTraceId(),
+                            event.getSpanId()
+                    )
+            );
+
+        } catch (Exception exception) {
+
+            return java.util.Optional.empty();
+        }
     }
 
     private String generateIncidentKey() {

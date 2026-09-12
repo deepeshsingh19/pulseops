@@ -34,3 +34,7 @@ logs/
 
 # OpenTelemetry Java agent
 infrastructure/observability/java-agent/opentelemetry-javaagent.jar
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
