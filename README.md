@@ -1,5 +1,9 @@
 # PulseOps
 
+## Live Demo
+
+[Open PulseOps Dashboard](https://pulseops-omega.vercel.app/)
+
 ### Distributed Incident Detection & Automated Root Cause Analysis
 
 PulseOps is an event-driven incident detection and automated RCA platform designed to detect abnormal behavior across distributed services, correlate telemetry, create incidents, collect observability evidence, and generate evidence-backed root cause analysis.
